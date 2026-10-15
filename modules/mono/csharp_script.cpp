@@ -454,6 +454,9 @@ bool CSharpLanguage::handles_global_class_type(const String &p_type) const {
 
 String CSharpLanguage::get_global_class_name(const String &p_path, String *r_base_type, String *r_icon_path, bool *r_is_abstract, bool *r_is_tool) const {
 	String class_name;
+	if (!GDMonoCache::godot_api_cache_updated) {
+		return class_name;
+	}
 	GDMonoCache::managed_callbacks.ScriptManagerBridge_GetGlobalClassName(&p_path, r_base_type, r_icon_path, r_is_abstract, r_is_tool, &class_name);
 	return class_name;
 }
@@ -1081,6 +1084,11 @@ bool CSharpLanguage::debug_break(const String &p_error, bool p_allow_continue) {
 
 #ifdef TOOLS_ENABLED
 void CSharpLanguage::_editor_init_callback() {
+	// The .NET runtime failed to load (and already reported why), so there is nothing to initialize.
+	if (!GDMono::get_singleton()->is_runtime_initialized()) {
+		return;
+	}
+
 	// Load GodotTools and initialize GodotSharpEditor
 
 	int32_t interop_funcs_size = 0;
@@ -2601,6 +2609,11 @@ Error CSharpScript::reload(bool p_keep_state) {
 	// In the case of C#, reload doesn't really do any script reloading.
 	// That's done separately via domain reloading.
 	reload_invalidated = false;
+
+	if (!GDMonoCache::godot_api_cache_updated) {
+		valid = false;
+		return OK;
+	}
 
 	String script_path = get_path();
 
